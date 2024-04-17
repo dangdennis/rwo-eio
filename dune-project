@@ -20,8 +20,10 @@
  (synopsis "A short synopsis")
  (description "A longer description")
  (depends
-  ocaml
-  dune
+  (ocaml
+   (>= 5.1.1))
+  (dune
+   (>= 3.15))
   (eio_main
    (= 1.0)))
  (tags
