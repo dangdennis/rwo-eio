@@ -4,6 +4,12 @@ Below are [Eio](https://github.com/ocaml-multicore/eio) translations of [the cod
 
 See `dune-project` for dependencies.
 
+Commands to run project
+```bash
+make dev # builds the ocaml project in watch mode
+make run # executes the script that runs all the examples
+```
+
 ## Async Basics
 
 #### OCaml utop (part 3)
