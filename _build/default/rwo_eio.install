@@ -1,0 +1,8 @@
+lib: [
+  "_build/install/default/lib/rwo_eio/META"
+  "_build/install/default/lib/rwo_eio/dune-package"
+  "_build/install/default/lib/rwo_eio/opam"
+]
+bin: [
+  "_build/install/default/bin/rwo_eio"
+]

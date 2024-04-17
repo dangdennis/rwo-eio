@@ -1,0 +1,3 @@
+(library
+ (name rwo_eio)
+ (libraries eio_main))
