@@ -52,9 +52,11 @@ module Delayer : Delayer_intf = struct
       t.jobs;
 
     Eio.Fiber.fork ~sw (fun () ->
-        if Queue.is_empty t.jobs then () else Eio.Time.sleep clock t.delay;
-        let job = Queue.pop t.jobs in
-        job ());
+        Eio.Time.sleep clock t.delay;
+        if Queue.is_empty t.jobs then ()
+        else
+          let job = Queue.pop t.jobs in
+          job ());
 
     promise
 end

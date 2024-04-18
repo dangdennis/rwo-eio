@@ -15,6 +15,7 @@ let () =
 
   let lines = count_lines ~cwd ~filename:"test.txt" in
   print_int lines;
+  print_newline ();
 
   let delayer = Delayer.create ~delay:5.0 in
 
@@ -25,6 +26,13 @@ let () =
         Eio.Promise.create_resolved my_result)
   in
 
+  print_endline "Waiting for the first promise to complete.";
+  let my_result = Eio.Promise.await first_promise in
+  print_endline "First promise completed.";
+  print_int my_result;
+  print_newline ();
+
+  print_endline "Schedule second task";
   let second_promise =
     Delayer.schedule ~sw ~clock delayer (fun () ->
         print_endline "Running my second action after 5 seconds.";
@@ -32,12 +40,10 @@ let () =
         Eio.Promise.create_resolved my_result)
   in
 
-  print_endline "Waiting for the first promise to complete.";
-  let my_result = Eio.Promise.await first_promise in
-  print_endline "First promise completed.";
-  print_int my_result;
-  print_newline ();
+  print_endline "Sleeping for 2 seconds.";
+  Eio.Time.sleep clock 2.0;
 
+  (* Promise will resolve ~3 seconds after we continue after sleeping. *)
   print_endline "Waiting for the second promise to complete.";
   Eio.Promise.await second_promise |> print_int;
   print_newline ();
