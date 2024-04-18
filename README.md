@@ -1,6 +1,8 @@
 # Concurrent Programming with Eio
 
-Below are [Eio](https://github.com/ocaml-multicore/eio) translations of [the code examples](https://github.com/realworldocaml/examples) in [Real World OCaml - Chapter 16. Concurrent Programming with Async](https://dev.realworldocaml.org/concurrent-programming.html). The section titles follow those in the book for easy cross-reference. Here is the version information of the software components that I have used:
+Below are [Eio](https://github.com/ocaml-multicore/eio) translations of [the code examples](https://github.com/realworldocaml/examples) in [Real World OCaml - Chapter 16. Concurrent Programming with Async](https://dev.realworldocaml.org/concurrent-programming.html). The section titles follow those in the book for easy cross-reference.
+
+This is a fork of https://github.com/dkim/rwo-lwt.
 
 See `dune-project` for dependencies.
 
