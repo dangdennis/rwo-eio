@@ -1,9 +1,9 @@
-(* Code translated from RWO Async to eio *)
+(* Code translated from RWO Async to eio. *)
+(* See bin/main.ml for usage. *)
 
 (* Async Basics Section *)
 
 (* For the sake of the examples, we'l call Eio_main.run here. *)
-(* Typically you'll have a single Eio_main at the root of your program and pass along env *)
 let save ~cwd ~path ~content : unit =
   let ( / ) = Eio.Path.( / ) in
   Eio.Path.save ~create:(`Or_truncate 0o777) (cwd / path) content
@@ -60,3 +60,27 @@ module Delayer : Delayer_intf = struct
 
     promise
 end
+
+(* Example: An Echo Server Section *)
+
+(* Unsure if Flow.copy handles pushback like the Async example *)
+let copy_blocks src dst = Eio.Flow.copy src dst
+
+let run ~net : unit =
+  Eio.Switch.run @@ fun sw ->
+  let addr = `Tcp (Eio.Net.Ipaddr.V4.loopback, 8080) in
+  let socket = Eio.Net.listen ~backlog:5 ~sw net addr in
+  let handle_client flow _addr =
+    Eio.traceln "Server: got connection from client";
+    Eio.Flow.copy_string "Hello from server" flow
+  in
+  Eio.Net.run_server socket handle_client ~on_error:(fun _ -> Eio.traceln "Server: error")
+
+(* client to connect and send message  *)
+let run_client ~net =
+  Eio.Switch.run ~name:"client" @@ fun sw ->
+  Eio.traceln "Client: connecting to server";
+  let addr = `Tcp (Eio.Net.Ipaddr.V4.loopback, 8080) in
+  let flow = Eio.Net.connect ~sw net addr in
+  (* Read all data until end-of-stream (shutdown): *)
+  Eio.traceln "Client: received %S" (Eio.Flow.read_all flow)

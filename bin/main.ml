@@ -3,6 +3,7 @@ open Rwo_eio
 let () =
   Eio_main.run @@ fun env ->
   Eio.Switch.run @@ fun sw ->
+  let net = Eio.Stdenv.net env in
   let cwd = Eio.Stdenv.cwd env in
   let clock = Eio.Stdenv.clock env in
 
@@ -47,5 +48,12 @@ let () =
   print_endline "Waiting for the second promise to complete.";
   Eio.Promise.await second_promise |> print_int;
   print_newline ();
+
+  Eio.Fiber.fork ~sw (fun () -> run ~net);
+  Eio.Fiber.fork ~sw (fun () -> run_client ~net);
+  Eio.Fiber.fork ~sw (fun () -> run_client ~net);
+  Eio.Fiber.fork ~sw (fun () -> run_client ~net);
+  Eio.Fiber.fork ~sw (fun () -> run_client ~net);
+  Eio.Fiber.fork ~sw (fun () -> run_client ~net);
 
   ()
