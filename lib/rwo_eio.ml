@@ -5,6 +5,7 @@
 
 (* Use of eio typically means we call Eio_main.run at the root of our application. *)
 (* This is equivalent to Lwt_main.run and Async.Scheduler.go *)
+(* bin/main.ml will run its own eio scheduler to run the rest of our examples. *)
 let () =
   Eio_main.run (fun env ->
       print_endline "Initialize the eio scheduler and do nothing.";
@@ -118,3 +119,49 @@ let improved_run ~net ~uppercase ~port : unit =
     Eio.Flow.copy_string msg flow
   in
   Eio.Net.run_server socket handle_client ~on_error:(fun _ -> Eio.traceln "Server: error")
+
+(* Example: Searching Definitions with DuckDuckGo *)
+
+let query_uri query =
+  let base_uri = Uri.of_string "http://api.duckduckgo.com/?format=json" in
+  Uri.add_query_param base_uri ("q", [ query ])
+
+(* Parsing JSON Strings *)
+
+let get_definition_from_json (json : string) : string option =
+  match Yojson.Safe.from_string json with
+  | `Assoc kv_list -> (
+      let find key =
+        match List.assoc key kv_list with
+        | exception Not_found -> None
+        | `String "" -> None
+        | s -> Some (Yojson.Safe.to_string s)
+      in
+      match find "Abstract" with Some _ as x -> x | None -> find "Definition")
+  | _ -> None
+
+(* let () = Logs.set_reporter (Logs_fmt.reporter ())
+
+   and () =
+     (* The eio backend does not leverage domains yet, but might in the near future *)
+     Logs_threaded.enable () *)
+
+(* Executing an HTTP Client Query *)
+(* eio and cohttp-eio do not use monadic error types, but we get exceptions with stacktraces! *)
+let get_definition_from_json ~net word =
+  Eio.traceln "Getting definition from DuckDuckGo";
+  Eio.Switch.run @@ fun sw ->
+  let client = Cohttp_eio.Client.make ~https:None net in
+  let resp, body = Cohttp_eio.Client.get ~sw client (query_uri word) in
+  if Http.Status.compare resp.status `OK = 0 then (
+    let body = Eio.Buf_read.(parse_exn take_all) body ~max_size:max_int in
+    (word, get_definition_from_json body))
+  else (
+    (* We'll raise an error for simplicity *)
+    Eio.traceln "Unexpected HTTP status: %a" Http.Status.pp resp.status;
+    raise (Failure "Unexpected HTTP status"))
+
+let print_result (word, definition) =
+  match definition with
+  | Some def -> Eio.traceln "%s: %s\n\n" word def
+  | None -> Eio.traceln "%s: \nNo definition found\n\n" word

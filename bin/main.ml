@@ -58,5 +58,8 @@ let () =
 
   Eio.Fiber.fork ~sw (fun () -> improved_run ~net ~uppercase:true ~port:8081);
   Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8081);
+
+  let duckduckgo_result = get_definition_from_json ~net "ocaml" in
+  print_result duckduckgo_result;
   
   ()

@@ -25,7 +25,13 @@
   (dune
    (>= 3.15))
   (eio_main
-   (= 1.0)))
+   (= 1.0))
+  (uri
+   (= 4.4.0))
+  (yojson
+   (= 2.1.2))
+  (cohttp-eio
+   (= 6.0.0~beta2)))
  (tags
   (topics "to describe" your project)))
 
