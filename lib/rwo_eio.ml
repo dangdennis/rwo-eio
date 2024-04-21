@@ -1,10 +1,19 @@
 (* Code translated from RWO Async to eio. *)
 (* See bin/main.ml for usage. *)
 
-(* Async Basics Section *)
+(* Async Basics *)
 
 (* Use of eio typically means we call Eio_main.run at the root of our application. *)
-(* We then pass explicit capabilities to our functions, such at cwd (current working directory), net,  *)
+(* This is equivalent to Lwt_main.run and Async.Scheduler.go *)
+let () =
+  Eio_main.run (fun env ->
+      print_endline "Initialize the eio scheduler and do nothing.";
+      let _net = Eio.Stdenv.net env in
+      let _cwd = Eio.Stdenv.cwd env in
+      let _clock = Eio.Stdenv.clock env in
+      ())
+
+(* We then pass explicit capabilities to our functions, such as cwd (current working directory), net,  *)
 let save ~cwd ~path ~content : unit =
   let ( / ) = Eio.Path.( / ) in
   Eio.Path.save ~create:(`Or_truncate 0o777) (cwd / path) content
@@ -27,7 +36,7 @@ let count_lines ~cwd ~(filename : string) : int =
   let lines = String.split_on_char '\n' contents in
   List.length lines
 
-(* Ivars and Upon Section *)
+(* Ivars and Upon *)
 
 (* The closest type to async's ivar is eio's promise. *)
 (* We provide a unit type because Eio.Promise.t requires a type parameter.  *)
@@ -65,31 +74,47 @@ module Delayer : Delayer_intf = struct
     promise
 end
 
-(* Example: An Echo Server Section *)
+(* Example: An Echo Server *)
 
 (* Unsure if Flow.copy handles pushback like the Async example *)
 (* TODO: Ask community for help. *)
 let copy_blocks src dst = Eio.Flow.copy src dst
 
+(* Eio.Net.run_server will run forever and block the main thread, unless it runs in a separate Eio.Fiber *)
 let run ~net : unit =
   Eio.Switch.run @@ fun sw ->
   let addr = `Tcp (Eio.Net.Ipaddr.V4.loopback, 8080) in
   let socket = Eio.Net.listen ~backlog:5 ~sw net addr in
+  (* TODO: How to work with eio to create an intermediate buffer that copies from Flow reader to Flow writer *)
   let handle_client flow addr =
     Eio.traceln "Server: got connection from client %a" Eio.Net.Sockaddr.pp addr;
-    let buffer = Eio.Buf_read.of_flow flow ~max_size:1024 in
-    (* Read all data until first newline *)
-    let client_msg = Eio.Buf_read.line buffer in
-    Eio.traceln "Server: received: %S" client_msg;
-    Eio.Flow.copy_string client_msg flow
+    let reader = Eio.Buf_read.of_flow flow ~max_size:1024 in
+    let msg = Eio.Buf_read.line reader in
+    Eio.traceln "Server: received: %S" msg;
+    Eio.Flow.copy_string msg flow
   in
   Eio.Net.run_server socket handle_client ~on_error:(fun _ -> Eio.traceln "Server: error")
 
-(* client to connect and send message  *)
-let run_client ~net =
+(* client to connect to the server via TCP  *)
+let run_client ~net ~port =
   Eio.Switch.run ~name:"client" @@ fun sw ->
   Eio.traceln "Client: connecting to server";
-  let addr = `Tcp (Eio.Net.Ipaddr.V4.loopback, 8080) in
+  let addr = `Tcp (Eio.Net.Ipaddr.V4.loopback, port) in
   let flow = Eio.Net.connect ~sw net addr in
   Eio.Buf_write.with_flow flow (fun to_server -> Eio.Buf_write.string to_server "Hello from client 1\n");
   Eio.traceln "Client: received %S" (Eio.Flow.read_all flow)
+
+(* Improving the Echo Server *)
+let improved_run ~net ~uppercase ~port : unit =
+  Eio.Switch.run @@ fun sw ->
+  let addr = `Tcp (Eio.Net.Ipaddr.V4.loopback, port) in
+  let socket = Eio.Net.listen ~backlog:5 ~sw net addr in
+  let handle_client flow addr =
+    Eio.traceln "Server: got connection from client %a" Eio.Net.Sockaddr.pp addr;
+    let reader = Eio.Buf_read.of_flow flow ~max_size:1024 in
+    let msg = Eio.Buf_read.line reader in
+    let msg = if uppercase then String.uppercase_ascii msg else msg in
+    Eio.traceln "Server: received: %S" msg;
+    Eio.Flow.copy_string msg flow
+  in
+  Eio.Net.run_server socket handle_client ~on_error:(fun _ -> Eio.traceln "Server: error")
