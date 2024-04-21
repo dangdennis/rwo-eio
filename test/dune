@@ -1,2 +1,3 @@
 (test
- (name rwo_eio_test))
+ (name rwo_eio_test)
+ (libraries rwo_eio))

@@ -3,7 +3,8 @@
 
 (* Async Basics Section *)
 
-(* For the sake of the examples, we'l call Eio_main.run here. *)
+(* Use of eio typically means we call Eio_main.run at the root of our application. *)
+(* We then pass explicit capabilities to our functions, such at cwd (current working directory), net,  *)
 let save ~cwd ~path ~content : unit =
   let ( / ) = Eio.Path.( / ) in
   Eio.Path.save ~create:(`Or_truncate 0o777) (cwd / path) content
@@ -27,7 +28,10 @@ let count_lines ~cwd ~(filename : string) : int =
   List.length lines
 
 (* Ivars and Upon Section *)
-(* Eio doesn't have ivar. Instead, we'll use an Eio.Promise.t instead. *)
+
+(* The closest type to async's ivar is eio's promise. *)
+(* We provide a unit type because Eio.Promise.t requires a type parameter.  *)
+let (_promise : unit Eio.Promise.t), _resolver = Eio.Promise.create ()
 
 module type Delayer_intf = sig
   type t
@@ -64,15 +68,20 @@ end
 (* Example: An Echo Server Section *)
 
 (* Unsure if Flow.copy handles pushback like the Async example *)
+(* TODO: Ask community for help. *)
 let copy_blocks src dst = Eio.Flow.copy src dst
 
 let run ~net : unit =
   Eio.Switch.run @@ fun sw ->
   let addr = `Tcp (Eio.Net.Ipaddr.V4.loopback, 8080) in
   let socket = Eio.Net.listen ~backlog:5 ~sw net addr in
-  let handle_client flow _addr =
-    Eio.traceln "Server: got connection from client";
-    Eio.Flow.copy_string "Hello from server" flow
+  let handle_client flow addr =
+    Eio.traceln "Server: got connection from client %a" Eio.Net.Sockaddr.pp addr;
+    let buffer = Eio.Buf_read.of_flow flow ~max_size:1024 in
+    (* Read all data until first newline *)
+    let client_msg = Eio.Buf_read.line buffer in
+    Eio.traceln "Server: received: %S" client_msg;
+    Eio.Flow.copy_string client_msg flow
   in
   Eio.Net.run_server socket handle_client ~on_error:(fun _ -> Eio.traceln "Server: error")
 
@@ -82,5 +91,5 @@ let run_client ~net =
   Eio.traceln "Client: connecting to server";
   let addr = `Tcp (Eio.Net.Ipaddr.V4.loopback, 8080) in
   let flow = Eio.Net.connect ~sw net addr in
-  (* Read all data until end-of-stream (shutdown): *)
+  Eio.Buf_write.with_flow flow (fun to_server -> Eio.Buf_write.string to_server "Hello from client 1\n");
   Eio.traceln "Client: received %S" (Eio.Flow.read_all flow)

@@ -18,11 +18,11 @@ let () =
   print_int lines;
   print_newline ();
 
-  let delayer = Delayer.create ~delay:5.0 in
+  let delayer = Delayer.create ~delay:1.0 in
 
   let first_promise =
     Delayer.schedule ~sw ~clock delayer (fun () ->
-        print_endline "Running my first action after 5 seconds.";
+        print_endline "Running my first action.";
         let my_result = 5 in
         Eio.Promise.create_resolved my_result)
   in
@@ -36,7 +36,7 @@ let () =
   print_endline "Schedule second task";
   let second_promise =
     Delayer.schedule ~sw ~clock delayer (fun () ->
-        print_endline "Running my second action after 5 seconds.";
+        print_endline "Running my second action.";
         let my_result = 10 in
         Eio.Promise.create_resolved my_result)
   in
