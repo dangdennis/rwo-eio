@@ -173,6 +173,9 @@ let query_uri query =
 (* Parsing JSON Strings *)
 
 let get_definition_from_json (json : string) : string option =
+  (* If you're curious what the raw json looks like, uncomment below. *)
+  (* print_endline "Parsing JSON string";
+     print_endline json; *)
   match Yojson.Safe.from_string json with
   | `Assoc kv_list -> (
       let find key =
