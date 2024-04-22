@@ -1,3 +1,11 @@
 (library
  (name rwo_eio)
- (libraries eio_main uri yojson cohttp-eio textwrap))
+ (libraries
+  eio_main ; eio
+  uri ; uri parser
+  yojson ; json
+  cohttp-eio ; http client
+  textwrap ; text wrapping
+  core ; std lib alternative. includes a command line parser
+  core_unix.command_unix ; runs cli commands
+  ))
