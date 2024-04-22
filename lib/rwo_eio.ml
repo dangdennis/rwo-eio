@@ -232,7 +232,9 @@ let search_cli () =
 (* Exception Handling *)
 (* With eio, we can use plain old try-catch and plain old exceptions *)
 
-let maybe_raise () = if Random.bool () then raise Exit else ()
+let maybe_raise () =
+  Eio.Switch.run @@ fun sw ->
+  Eio.Fiber.fork ~sw (fun () -> if Random.bool () then raise Exit else raise Not_found)
 
 let handle_error () =
   try maybe_raise () with

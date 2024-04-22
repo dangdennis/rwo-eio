@@ -68,5 +68,8 @@ let () =
   search_and_print_v2 ~net [ "ocaml" ];
 
   handle_error ();
+  handle_error ();
+  handle_error ();
+  handle_error ();
 
   ()
