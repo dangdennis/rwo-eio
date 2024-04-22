@@ -31,7 +31,9 @@
   (yojson
    (= 2.1.2))
   (cohttp-eio
-   (= 6.0.0~beta2)))
+   (= 6.0.0~beta2))
+  (textwrap
+   (= 0.2.1)))
  (tags
   (topics "to describe" your project)))
 

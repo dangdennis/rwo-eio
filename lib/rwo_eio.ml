@@ -153,9 +153,9 @@ let get_definition_from_json ~net word =
   Eio.Switch.run @@ fun sw ->
   let client = Cohttp_eio.Client.make ~https:None net in
   let resp, body = Cohttp_eio.Client.get ~sw client (query_uri word) in
-  if Http.Status.compare resp.status `OK = 0 then (
+  if Http.Status.compare resp.status `OK = 0 then
     let body = Eio.Buf_read.(parse_exn take_all) body ~max_size:max_int in
-    (word, get_definition_from_json body))
+    (word, get_definition_from_json body)
   else (
     (* We'll raise an error for simplicity *)
     Eio.traceln "Unexpected HTTP status: %a" Http.Status.pp resp.status;
@@ -163,5 +163,19 @@ let get_definition_from_json ~net word =
 
 let print_result (word, definition) =
   match definition with
-  | Some def -> Eio.traceln "%s: %s\n\n" word def
+  | Some def -> Eio.traceln "%s: %s\n\n" word (String.concat "\n" (Wrapper.wrap (Wrapper.make 70) def))
   | None -> Eio.traceln "%s: \nNo definition found\n\n" word
+
+(* let search_and_print ~net words =
+    Eio.Switch.run @@ fun sw ->
+      let client = Cohttp_eio.Client.make ~https:None net in
+      (* Use Eio.Fiber.fork to start concurrent searches *)
+      let fibers = List.map words ~f:(fun word ->
+        Eio.Fiber.fork ~sw (fun () ->
+          match get_definition_from_json ~net:client word with
+          | exception e -> Printf.eprintf "Error fetching definition for %s: %s\n" word (Printexc.to_string e)
+          | result -> print_result result
+        )
+      ) in
+      (* Wait for all fibers to complete *)
+      List.iter fibers ~f:Eio.Fiber.await *)
