@@ -1,6 +1,5 @@
-
-run:
-	dune exec rwo_eio
+main:
+	dune exec main
 
 dev:
 	dune build -w

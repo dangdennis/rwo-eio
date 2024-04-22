@@ -7,7 +7,7 @@ See `dune-project` for dependencies.
 Commands to run project
 ```bash
 make dev # builds the ocaml project in watch mode, aliases `dune build -w`
-make run # executes main.ml that runs all the examples, aliases `dune exec main`
+make main # executes main.ml that runs all the examples, aliases `dune exec main`
 dune exec server -- -p 8080 -uppercase false
 dune exec search ocaml functionalprogramming monad
 ```

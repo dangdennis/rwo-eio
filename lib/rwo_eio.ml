@@ -228,3 +228,13 @@ let search_cli () =
            search_and_print ~net words))
   in
   Command_unix.run command
+
+(* Exception Handling *)
+(* With eio, we can use plain old try-catch and plain old exceptions *)
+
+let maybe_raise () = if Random.bool () then raise Exit else ()
+
+let handle_error () =
+  try maybe_raise () with
+  | Exit -> print_endline "Caught Exit exception"
+  | exn -> Fmt.pr "Caught exception: %s" (Printexc.to_string exn)

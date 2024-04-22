@@ -56,13 +56,17 @@ let () =
   Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8080);
   Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8080);
 
+  (* cli version is in bin/server.ml *)
   Eio.Fiber.fork ~sw (fun () -> improved_run ~net ~uppercase:true ~port:8081);
   Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8081);
 
   let duckduckgo_result = get_definition_from_json ~net "ocaml" in
   print_result duckduckgo_result;
 
-  search_and_print ~net [ "ocaml"; "reasonml"; "graphql"; "reason-react" ];
-  search_and_print_v2 ~net [ "ocaml"; "reasonml"; "graphql"; "reason-react" ];
+  (* cli version is in bin/search.ml *)
+  search_and_print ~net [ "ocaml" ];
+  search_and_print_v2 ~net [ "ocaml" ];
+
+  handle_error ();
 
   ()
