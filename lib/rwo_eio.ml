@@ -47,7 +47,13 @@ module type Delayer_intf = sig
   type t
 
   val create : delay:float -> t
-  val schedule : sw:Eio.Switch.t -> clock:'a Eio.Time.clock -> t -> (unit -> 'b Eio.Promise.t) -> 'b Eio.Promise.t
+
+  val schedule :
+    sw:Eio.Switch.t ->
+    clock:'a Eio.Time.clock ->
+    t ->
+    (unit -> 'b Eio.Promise.t) ->
+    'b Eio.Promise.t
 end
 
 module Delayer : Delayer_intf = struct
@@ -102,7 +108,8 @@ let run_client ~net ~port =
   Eio.traceln "Client: connecting to server";
   let addr = `Tcp (Eio.Net.Ipaddr.V4.loopback, port) in
   let flow = Eio.Net.connect ~sw net addr in
-  Eio.Buf_write.with_flow flow (fun to_server -> Eio.Buf_write.string to_server "Hello from client 1\n");
+  Eio.Buf_write.with_flow flow (fun to_server ->
+      Eio.Buf_write.string to_server "Hello from client 1\n");
   Eio.traceln "Client: received %S" (Eio.Flow.read_all flow)
 
 (* Improving the Echo Server *)
@@ -140,12 +147,6 @@ let get_definition_from_json (json : string) : string option =
       match find "Abstract" with Some _ as x -> x | None -> find "Definition")
   | _ -> None
 
-(* let () = Logs.set_reporter (Logs_fmt.reporter ())
-
-   and () =
-     (* The eio backend does not leverage domains yet, but might in the near future *)
-     Logs_threaded.enable () *)
-
 (* Executing an HTTP Client Query *)
 (* eio and cohttp-eio do not use monadic error types, but we get exceptions with stacktraces! *)
 let get_definition_from_json ~net word =
@@ -163,19 +164,15 @@ let get_definition_from_json ~net word =
 
 let print_result (word, definition) =
   match definition with
-  | Some def -> Eio.traceln "%s: %s\n\n" word (String.concat "\n" (Wrapper.wrap (Wrapper.make 70) def))
+  | Some def ->
+      Eio.traceln "%s: %s\n\n" word (String.concat "\n" (Wrapper.wrap (Wrapper.make 70) def))
   | None -> Eio.traceln "%s: \nNo definition found\n\n" word
 
-(* let search_and_print ~net words =
-    Eio.Switch.run @@ fun sw ->
-      let client = Cohttp_eio.Client.make ~https:None net in
-      (* Use Eio.Fiber.fork to start concurrent searches *)
-      let fibers = List.map words ~f:(fun word ->
-        Eio.Fiber.fork ~sw (fun () ->
-          match get_definition_from_json ~net:client word with
-          | exception e -> Printf.eprintf "Error fetching definition for %s: %s\n" word (Printexc.to_string e)
-          | result -> print_result result
-        )
-      ) in
-      (* Wait for all fibers to complete *)
-      List.iter fibers ~f:Eio.Fiber.await *)
+let search_and_print ~net words =
+  words
+  |> Eio.Fiber.List.map (fun word -> get_definition_from_json ~net word)
+  |> List.iter print_result
+
+(* Prints in parallel as opposed to the previous that collects all before printing *)
+let search_and_print_v2 ~net words =
+  words |> Eio.Fiber.List.iter (fun word -> get_definition_from_json ~net word |> print_result)
