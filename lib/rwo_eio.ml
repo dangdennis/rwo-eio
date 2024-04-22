@@ -127,6 +127,26 @@ let improved_run ~net ~uppercase ~port : unit =
   in
   Eio.Net.run_server socket handle_client ~on_error:(fun _ -> Eio.traceln "Server: error")
 
+  (* See usage in  *)
+let run_server_as_cli =
+  let open Command.Param in
+  let command =
+    Command.basic ~summary:"Start an echo server"
+      (let uppercase_param =
+         flag "-uppercase" (optional bool) ~doc:"Convert to uppercase before echoing back"
+       in
+       let port_param = flag "-port" (optional int) ~doc:"Port to listen on (default 8080)" in
+       map (both uppercase_param port_param) ~f:(fun (uppercase, port) () ->
+           Eio_main.run @@ fun env ->
+           let net = Eio.Stdenv.net env in
+           match (uppercase, port) with
+           | Some uppercase, Some port -> improved_run ~net ~uppercase ~port
+           | Some uppercase, None -> improved_run ~net ~uppercase ~port:8080
+           | None, Some port -> improved_run ~net ~uppercase:false ~port
+           | None, None -> improved_run ~net ~uppercase:false ~port:8080))
+  in
+  Command_unix.run command
+
 (* Example: Searching Definitions with DuckDuckGo *)
 
 let query_uri query =
