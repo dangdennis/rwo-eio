@@ -33,7 +33,9 @@
   (cohttp-eio
    (= 6.0.0~beta2))
   (textwrap
-   (= 0.2.1)))
+   (= 0.2.1))
+  (core
+   (= v0.16.2)))
  (tags
   (topics "to describe" your project)))
 
