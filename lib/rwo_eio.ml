@@ -6,13 +6,13 @@
 (* Use of eio typically means we call Eio_main.run at the root of our application. *)
 (* This is equivalent to Lwt_main.run and Async.Scheduler.go *)
 (* bin/main.ml will run its own eio scheduler to run the rest of our examples. *)
-let () =
-  Eio_main.run (fun env ->
-      print_endline "Initialize the eio scheduler and do nothing.";
-      let _net = Eio.Stdenv.net env in
-      let _cwd = Eio.Stdenv.cwd env in
-      let _clock = Eio.Stdenv.clock env in
-      ())
+(* let example_eio_app () =
+   Eio_main.run (fun env ->
+       print_endline "Initialize the eio scheduler and do nothing.";
+       let _net = Eio.Stdenv.net env in
+       let _cwd = Eio.Stdenv.cwd env in
+       let _clock = Eio.Stdenv.clock env in
+       ()) *)
 
 (* We then pass explicit capabilities to our functions, such as cwd (current working directory), net,  *)
 let save ~cwd ~path ~content : unit =
@@ -114,6 +114,7 @@ let run_client ~net ~port =
 
 (* Improving the Echo Server *)
 let improved_run ~net ~uppercase ~port : unit =
+  Eio.traceln "Running server with port %d and uppercase %b" port uppercase;
   Eio.Switch.run @@ fun sw ->
   let addr = `Tcp (Eio.Net.Ipaddr.V4.loopback, port) in
   let socket = Eio.Net.listen ~backlog:5 ~sw net addr in
@@ -127,8 +128,9 @@ let improved_run ~net ~uppercase ~port : unit =
   in
   Eio.Net.run_server socket handle_client ~on_error:(fun _ -> Eio.traceln "Server: error")
 
-  (* See usage in  *)
-let run_server_as_cli =
+(* See usage in  *)
+let server_cli () =
+  print_endline "Running server as CLI";
   let open Command.Param in
   let command =
     Command.basic ~summary:"Start an echo server"
@@ -146,6 +148,21 @@ let run_server_as_cli =
            | None, None -> improved_run ~net ~uppercase:false ~port:8080))
   in
   Command_unix.run command
+
+(* Alternative server cli that uses the stdlib *)
+let server_cli_simple () =
+  let usage_msg = "Start an echo server" in
+  let port = ref 8080 in
+  let uppercase = ref false in
+  let speclist =
+    [
+      ("-port", Arg.Set_int port, "Port to listen on (default 8080)");
+      ("-uppercase", Arg.Set uppercase, "Convert to uppercase before echoing back");
+    ]
+  in
+  let anon_fun _ = () in
+  let () = Arg.parse speclist anon_fun usage_msg in
+  Eio_main.run (fun env -> improved_run ~net:(Eio.Stdenv.net env) ~uppercase:!uppercase ~port:!port)
 
 (* Example: Searching Definitions with DuckDuckGo *)
 
@@ -196,3 +213,15 @@ let search_and_print ~net words =
 (* Prints in parallel as opposed to the previous that collects all before printing *)
 let search_and_print_v2 ~net words =
   words |> Eio.Fiber.List.iter (fun word -> get_definition_from_json ~net word |> print_result)
+
+let search_cli () =
+  let open Command.Param in
+  let command =
+    Command.basic ~summary:"Retrieve definitions from duckduckgo search engine"
+      (let words_param = anon (sequence ("words" %: string)) in
+       map words_param ~f:(fun words () ->
+           Eio_main.run @@ fun env ->
+           let net = Eio.Stdenv.net env in
+           search_and_print ~net words))
+  in
+  Command_unix.run command

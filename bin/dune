@@ -1,4 +1,4 @@
-(executable
- (public_name rwo_eio)
- (name main)
+(executables
+ (names main server search)
+ (public_names main server search)
  (libraries rwo_eio))

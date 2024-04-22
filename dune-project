@@ -21,7 +21,7 @@
  (description "A longer description")
  (depends
   (ocaml
-   (>= 5.1.1))
+   (>= 5.1.1)) 
   (dune
    (>= 3.15))
   (eio_main
