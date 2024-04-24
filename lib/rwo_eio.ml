@@ -14,7 +14,7 @@
        let _clock = Eio.Stdenv.clock env in
        ()) *)
 
-(* We then pass explicit capabilities to our functions, such as cwd (current working directory), net,  *)
+(* With eio, we pass explicit capabilities to our functions, such as cwd (current working directory), net, clock, etc. *)
 let save ~cwd ~path ~content : unit =
   let ( / ) = Eio.Path.( / ) in
   Eio.Path.save ~create:(`Or_truncate 0o777) (cwd / path) content
