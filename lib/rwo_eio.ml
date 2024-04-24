@@ -315,8 +315,31 @@ let string_and_float ~clock =
 (* warning: `first` does not guarantee that exactly one of two actions is taken. *)
 (* https://github.com/ocaml-multicore/eio?tab=readme-ov-file#racing *)
 let improved_get_definition_with_timeout ~clock ~net ~server ~timeout word =
+  (* We could use Eio.Time.with_timeout if we don't need the results. *)
   Eio.Fiber.first
     (fun () -> improved_get_definition ~net ~server word)
     (fun () ->
       Eio.Time.sleep clock timeout;
       (word, None))
+
+(* todo: figure out how if cohttp eio has an interrupt option and eio has an *)
+(* equivalent of Async's choose and choice *)
+
+(* Working with System Threads *)
+
+(* https://github.com/ocaml-multicore/eio?tab=readme-ov-file#unix-and-system-threads *)
+let def () =
+  Eio_unix.run_in_systhread (fun () ->
+      let open Base in
+      List.range 0 10)
+
+(* eio doesn't yet provide a Clock.every equivalent. *)
+let every ~clock ~sw ~stop period f =
+  let rec loop () =
+    if Eio.Promise.is_resolved stop then ()
+    else (
+      Eio.Time.sleep clock period;
+      f ();
+      loop ())
+  in
+  Eio.Fiber.fork ~sw (fun () -> loop ())

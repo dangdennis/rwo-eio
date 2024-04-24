@@ -3,7 +3,7 @@ open Rwo_eio
 let () =
   Eio_main.run @@ fun env ->
   Eio.Switch.run @@ fun sw ->
-  let net = Eio.Stdenv.net env in
+  let _net = Eio.Stdenv.net env in
   let cwd = Eio.Stdenv.cwd env in
   let clock = Eio.Stdenv.clock env in
 
@@ -49,7 +49,7 @@ let () =
   Eio.Promise.await second_promise |> print_int;
   print_newline ();
 
-  Eio.Fiber.fork ~sw (fun () -> run ~net);
+  (* Eio.Fiber.fork ~sw (fun () -> run ~net);
   Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8080);
   Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8080);
   Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8080);
@@ -61,11 +61,11 @@ let () =
   Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8081);
 
   let duckduckgo_result = get_definition ~net "ocaml" in
-  print_result duckduckgo_result;
+  print_result duckduckgo_result; *)
 
   (* cli version is in bin/search.ml *)
-  search_and_print ~net [ "ocaml" ];
-  search_and_print_in_parallel ~net [ "ocaml" ];
+  (* search_and_print ~net [ "ocaml" ];
+  search_and_print_in_parallel ~net [ "ocaml" ]; *)
 
   handle_error ();
   handle_error ();
@@ -78,5 +78,10 @@ let () =
   print_endline str;
   print_float float;
   print_newline ();
+
+  let (stop, resolver) = Eio.Promise.create () in
+  every ~sw ~clock ~stop 1.0 (fun () -> print_endline "Tick");
+  Eio.Time.sleep clock 4.0;
+  Eio.Promise.resolve resolver ();
 
   ()
