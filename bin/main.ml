@@ -74,4 +74,9 @@ let () =
 
   monitor blow_up;
 
+  let str, float = string_and_float ~clock in
+  print_endline str;
+  print_float float;
+  print_newline ();
+
   ()

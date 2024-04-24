@@ -293,3 +293,21 @@ let improved_search_cli () =
            List.iter (fun server -> improved_search_and_print ~net ~server words) servers))
   in
   Command_unix.run command
+
+(* Timeouts, Cancellation, and Choices *)
+
+(* eio doesn't have a convenience method similar to Deferred.both. *)
+(* But we can replicate that! *)
+let string_and_float ~clock =
+  Eio.Switch.run @@ fun sw ->
+  let result1 =
+    Eio.Fiber.fork_promise ~sw (fun () ->
+        Eio.Time.sleep clock 1.0;
+        "A")
+  in
+  let result2 =
+    Eio.Fiber.fork_promise ~sw (fun () ->
+        Eio.Time.sleep clock 2.0;
+        3.14)
+  in
+  (Eio.Promise.await_exn result1, Eio.Promise.await_exn result2)
