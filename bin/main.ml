@@ -3,7 +3,7 @@ open Rwo_eio
 let () =
   Eio_main.run @@ fun env ->
   Eio.Switch.run @@ fun sw ->
-  let _net = Eio.Stdenv.net env in
+  let net = Eio.Stdenv.net env in
   let cwd = Eio.Stdenv.cwd env in
   let clock = Eio.Stdenv.clock env in
 
@@ -49,23 +49,24 @@ let () =
   Eio.Promise.await second_promise |> print_int;
   print_newline ();
 
-  (* Eio.Fiber.fork ~sw (fun () -> run ~net);
-     Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8080);
-     Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8080);
-     Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8080);
-     Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8080);
-     Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8080);
+  Eio.Fiber.fork ~sw (fun () -> run ~net);
+  Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8080);
+  Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8080);
+  Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8080);
+  Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8080);
+  Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8080);
 
-     (* cli version is in bin/server.ml *)
-     Eio.Fiber.fork ~sw (fun () -> improved_run ~net ~uppercase:true ~port:8081);
-     Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8081);
+  (* cli version is in bin/server.ml *)
+  Eio.Fiber.fork ~sw (fun () -> improved_run ~net ~uppercase:true ~port:8081);
+  Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8081);
 
-     let duckduckgo_result = get_definition ~net "ocaml" in
-     print_result duckduckgo_result; *)
+  let duckduckgo_result = get_definition ~net "ocaml" in
+  print_result duckduckgo_result;
 
   (* cli version is in bin/search.ml *)
-  (* search_and_print ~net [ "ocaml" ];
-     search_and_print_in_parallel ~net [ "ocaml" ]; *)
+  search_and_print ~net [ "ocaml" ];
+  search_and_print_in_parallel ~net [ "ocaml" ];
+
   handle_error ();
   handle_error ();
   handle_error ();
@@ -76,17 +77,20 @@ let () =
   let str, float = string_and_float ~clock in
   Eio.traceln "%s and %f" str float;
 
-  (* let cancel = every ~sw ~clock  1.0 (fun () -> print_endline "Tick") in
-  print_endline "Waiting for 4 seconds.";
+  let stop, resolver = Eio.Promise.create () in
+  every ~sw ~clock ~stop 1.0 (fun () -> Eio.traceln "Tick");
+  Eio.traceln "Waiting for 4 seconds.";
   Eio.Time.sleep clock 4.0;
-  print_endline "Stopping the every.";
-  cancel (); *)
+  Eio.traceln "Stopping ticker.";
+  Eio.Promise.resolve resolver ();
+  Eio.traceln "Stopped ticker.";
 
-  Eio.traceln "Starting log_delays";
-  let cancel = log_delays ~sw ~clock in
-  Eio.traceln "Waiting for 2 seconds.";
+  let stop2, resolver2 = Eio.Promise.create () in
+  log_delays ~sw ~clock ~stop:stop2;
+  Eio.traceln "Waiting for 0.5 seconds.";
   Eio.Time.sleep clock 0.5;
-  print_endline "Stopping the log_delays.";
-  cancel ();
+  Eio.traceln "Stopping log_delays.";
+  Eio.Promise.resolve resolver2 ();
+  Eio.traceln "Stopped log_delays.";
 
   ()
