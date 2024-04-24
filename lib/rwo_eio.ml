@@ -311,3 +311,12 @@ let string_and_float ~clock =
         3.14)
   in
   (Eio.Promise.await_exn result1, Eio.Promise.await_exn result2)
+
+(* warning: `first` does not guarantee that exactly one of two actions is taken. *)
+(* https://github.com/ocaml-multicore/eio?tab=readme-ov-file#racing *)
+let improved_get_definition_with_timeout ~clock ~net ~server ~timeout word =
+  Eio.Fiber.first
+    (fun () -> improved_get_definition ~net ~server word)
+    (fun () ->
+      Eio.Time.sleep clock timeout;
+      (word, None))
