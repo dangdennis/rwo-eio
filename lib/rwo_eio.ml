@@ -189,7 +189,7 @@ let get_definition_from_json (json : string) : string option =
 
 (* Executing an HTTP Client Query *)
 (* eio and cohttp-eio do not use monadic error types, but we get exceptions with stacktraces! *)
-let get_definition_from_json ~net word =
+let get_definition ~net word =
   Eio.traceln "Getting definition from DuckDuckGo";
   Eio.Switch.run @@ fun sw ->
   let client = Cohttp_eio.Client.make ~https:None net in
@@ -209,13 +209,11 @@ let print_result (word, definition) =
   | None -> Eio.traceln "%s: \nNo definition found\n\n" word
 
 let search_and_print ~net words =
-  words
-  |> Eio.Fiber.List.map (fun word -> get_definition_from_json ~net word)
-  |> List.iter print_result
+  words |> Eio.Fiber.List.map (fun word -> get_definition ~net word) |> List.iter print_result
 
 (* Prints in parallel as opposed to the previous that collects all before printing *)
-let search_and_print_v2 ~net words =
-  words |> Eio.Fiber.List.iter (fun word -> get_definition_from_json ~net word |> print_result)
+let search_and_print_in_parallel ~net words =
+  words |> Eio.Fiber.List.iter (fun word -> get_definition ~net word |> print_result)
 
 let search_cli () =
   let open Command.Param in
@@ -240,3 +238,58 @@ let handle_error () =
   try maybe_raise () with
   | Exit -> print_endline "Caught Exit exception"
   | exn -> Fmt.pr "Caught exception: %s" (Printexc.to_string exn)
+
+(* Monitors *)
+(* eio does not have an equivalent of Async's monitors because there's no need.  *)
+(* You can fork and catch exceptions however you want, and retry failed fibers. *)
+(* Below is a simple example without fibers. *)
+let monitor f =
+  let rec loop count =
+    if count >= 3 then Eio.traceln "Failed after 3 attempts"
+    else
+      try f ()
+      with exn ->
+        Eio.traceln "Caught exception: %s" (Printexc.to_string exn);
+        loop (count + 1)
+  in
+  loop 0
+
+let blow_up () = raise (Failure "Monitor error")
+
+(* Example: Handling Exceptions with DuckDuckGo *)
+
+let improved_query_uri ~server query =
+  let base_uri = Uri.of_string (String.concat "" [ "http://"; server; "/?format=json" ]) in
+  Uri.add_query_param base_uri ("q", [ query ])
+
+let improved_get_definition ~net ~server word =
+  Eio.traceln "Getting definition from DuckDuckGo";
+  Eio.Switch.run @@ fun sw ->
+  let client = Cohttp_eio.Client.make ~https:None net in
+  let resp, body = Cohttp_eio.Client.get ~sw client (improved_query_uri ~server word) in
+  if Http.Status.compare resp.status `OK = 0 then
+    let body = Eio.Buf_read.(parse_exn take_all) body ~max_size:max_int in
+    (word, get_definition_from_json body)
+  else (
+    (* We'll raise an error for simplicity *)
+    Eio.traceln "Unexpected HTTP status: %a" Http.Status.pp resp.status;
+    raise (Failure "Unexpected HTTP status"))
+
+let improved_search_and_print ~net ~server words =
+  words
+  |> Eio.Fiber.List.iter (fun word ->
+         try improved_get_definition ~net ~server word |> print_result
+         with exn -> Eio.traceln "Caught exception: %s" (Printexc.to_string exn))
+
+let improved_search_cli () =
+  let open Command.Param in
+  let command =
+    Command.basic ~summary:"Retrieve definitions from duckduckgo search engine"
+      (let words_param = anon (sequence ("words" %: string)) in
+       let servers_params = flag "-servers" (listed string) ~doc:"Server to query" in
+       map (both words_param servers_params) ~f:(fun (words, servers) () ->
+           Eio_main.run @@ fun env ->
+           let net = Eio.Stdenv.net env in
+           List.iter (fun server -> improved_search_and_print ~net ~server words) servers))
+  in
+  Command_unix.run command
