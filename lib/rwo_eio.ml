@@ -334,7 +334,9 @@ let def () =
       List.range 0 10)
 
 (* eio doesn't yet provide a Clock.every equivalent. *)
-let every ~clock ~sw ~stop period f =
+let every ~clock ~sw period f =
+  let stop, resolver = Eio.Promise.create () in
+  let cancel () = Eio.Promise.resolve resolver () in
   let rec loop () =
     if Eio.Promise.is_resolved stop then ()
     else (
@@ -342,4 +344,21 @@ let every ~clock ~sw ~stop period f =
       f ();
       loop ())
   in
-  Eio.Fiber.fork ~sw (fun () -> loop ())
+  Eio.Fiber.fork ~sw (fun () -> loop ());
+  cancel
+
+let log_delays ~clock ~sw =
+  let start = Unix.gettimeofday () in
+  let print_time () =
+    let diff = Unix.gettimeofday () -. start in
+    Eio.traceln "%f, " diff
+  in
+  let cancel = every ~clock ~sw 0.1 print_time in
+  Eio.traceln "Finished at";
+  print_time ();
+  cancel
+
+let noalloc_busy_loop () : unit =
+  for _i = 0 to 10_000_000_000 do
+    ()
+  done

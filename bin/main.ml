@@ -50,23 +50,22 @@ let () =
   print_newline ();
 
   (* Eio.Fiber.fork ~sw (fun () -> run ~net);
-  Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8080);
-  Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8080);
-  Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8080);
-  Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8080);
-  Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8080);
+     Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8080);
+     Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8080);
+     Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8080);
+     Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8080);
+     Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8080);
 
-  (* cli version is in bin/server.ml *)
-  Eio.Fiber.fork ~sw (fun () -> improved_run ~net ~uppercase:true ~port:8081);
-  Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8081);
+     (* cli version is in bin/server.ml *)
+     Eio.Fiber.fork ~sw (fun () -> improved_run ~net ~uppercase:true ~port:8081);
+     Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8081);
 
-  let duckduckgo_result = get_definition ~net "ocaml" in
-  print_result duckduckgo_result; *)
+     let duckduckgo_result = get_definition ~net "ocaml" in
+     print_result duckduckgo_result; *)
 
   (* cli version is in bin/search.ml *)
   (* search_and_print ~net [ "ocaml" ];
-  search_and_print_in_parallel ~net [ "ocaml" ]; *)
-
+     search_and_print_in_parallel ~net [ "ocaml" ]; *)
   handle_error ();
   handle_error ();
   handle_error ();
@@ -75,13 +74,19 @@ let () =
   monitor blow_up;
 
   let str, float = string_and_float ~clock in
-  print_endline str;
-  print_float float;
-  print_newline ();
+  Eio.traceln "%s and %f" str float;
 
-  let (stop, resolver) = Eio.Promise.create () in
-  every ~sw ~clock ~stop 1.0 (fun () -> print_endline "Tick");
+  (* let cancel = every ~sw ~clock  1.0 (fun () -> print_endline "Tick") in
+  print_endline "Waiting for 4 seconds.";
   Eio.Time.sleep clock 4.0;
-  Eio.Promise.resolve resolver ();
+  print_endline "Stopping the every.";
+  cancel (); *)
+
+  Eio.traceln "Starting log_delays";
+  let cancel = log_delays ~sw ~clock in
+  Eio.traceln "Waiting for 2 seconds.";
+  Eio.Time.sleep clock 0.5;
+  print_endline "Stopping the log_delays.";
+  cancel ();
 
   ()
