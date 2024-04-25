@@ -76,8 +76,6 @@ end
 
 (* Example: An Echo Server *)
 
-(* Unsure if Flow.copy handles pushback like the Async example *)
-(* TODO: Ask community for help. *)
 let copy_blocks src dst = Eio.Flow.copy src dst
 
 (* Eio.Net.run_server will run forever and block the main thread, unless it runs in a separate Eio.Fiber *)
@@ -305,18 +303,20 @@ let string_and_float ~clock =
   in
   (Eio.Promise.await_exn result1, Eio.Promise.await_exn result2)
 
-(* warning: `first` does not guarantee that exactly one of two actions is taken. *)
+(* Eio timeouts use Fiber.first underneath the hood. `Fiber.first` does not guarantee that exactly one of two actions is taken. *)
 (* https://github.com/ocaml-multicore/eio?tab=readme-ov-file#racing *)
-let improved_get_definition_with_timeout ~clock ~net ~server ~timeout word =
-  (* We could use Eio.Time.with_timeout if we don't need the results. *)
-  Eio.Fiber.first
-    (fun () -> improved_get_definition ~net ~server word)
-    (fun () ->
-      Eio.Time.sleep clock timeout;
-      (word, None))
+let improved_get_definition_with_timeout ~net ~server ~timeout word =
+  Eio.Time.Timeout.run_exn timeout (fun () -> improved_get_definition ~net ~server word)
 
-(* todo: figure out how if cohttp eio has an interrupt option and eio has an *)
-(* equivalent of Async's choose and choice *)
+let improved_search_and_print_with_timeout ~clock ~net ~server ~timeout words =
+  words
+  |> Eio.Fiber.List.iter (fun word ->
+         try
+           improved_get_definition_with_timeout
+             ~timeout:(Eio.Time.Timeout.seconds clock timeout)
+             ~net ~server word
+           |> print_result
+         with exn -> Eio.traceln "Caught exception: %s" (Printexc.to_string exn))
 
 (* Working with System Threads *)
 
