@@ -15,25 +15,18 @@
        ()) *)
 
 (* With eio, we pass explicit capabilities to our functions, such as cwd (current working directory), net, clock, etc. *)
-let save ~cwd ~path ~content : unit =
-  let ( / ) = Eio.Path.( / ) in
-  Eio.Path.save ~create:(`Or_truncate 0o777) (cwd / path) content
+let save ~path ~content : unit = Eio.Path.save ~create:(`Or_truncate 0o777) path content
+let file_contents ~path : string = Eio.Path.load path
 
-let file_contents ~cwd ~(filename : string) : string =
-  let ( / ) = Eio.Path.( / ) in
-  Eio.Path.load (cwd / filename)
-
-let uppercase_file ~cwd ~(filename : string) : unit =
-  let ( / ) = Eio.Path.( / ) in
-  let contents = Eio.Path.load (cwd / filename) in
+let uppercase_file ~path : unit =
+  let contents = Eio.Path.load path in
   let uppercase = String.uppercase_ascii contents in
   (* `Or_truncate 0o777 allows overwrites to the file if it exists. Unix things. *)
   (* https://github.com/ocaml-multicore/eio/blob/c1c2d634dee8640a386e1343063ad820ae3fe4fd/lib_eio/fs.ml#L41 *)
-  Eio.Path.save ~create:(`Or_truncate 0o777) (cwd / filename) uppercase
+  Eio.Path.save ~create:(`Or_truncate 0o777) path uppercase
 
-let count_lines ~cwd ~(filename : string) : int =
-  let ( / ) = Eio.Path.( / ) in
-  let contents = Eio.Path.load (cwd / filename) in
+let count_lines ~path : int =
+  let contents = Eio.Path.load path in
   let lines = String.split_on_char '\n' contents in
   List.length lines
 

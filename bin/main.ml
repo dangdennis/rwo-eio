@@ -7,14 +7,16 @@ let () =
   let cwd = Eio.Stdenv.cwd env in
   let clock = Eio.Stdenv.clock env in
 
-  save ~cwd ~path:"test.txt" ~content:"This is only a test.";
+  let ( / ) = Eio.Path.( / ) in
 
-  let contents = file_contents ~cwd ~filename:"test.txt" in
+  save ~path:(cwd / "test.txt") ~content:"This is only a test.";
+
+  let contents = file_contents ~path:(cwd / "test.txt") in
   print_endline contents;
 
-  uppercase_file ~cwd ~filename:"test.txt";
+  uppercase_file ~path:(cwd / "test.txt");
 
-  let lines = count_lines ~cwd ~filename:"test.txt" in
+  let lines = count_lines ~path:(cwd / "test.txt") in
   print_int lines;
   print_newline ();
 
