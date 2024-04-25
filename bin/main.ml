@@ -51,7 +51,9 @@ let () =
   Eio.Promise.await second_promise |> print_int;
   print_newline ();
 
-  Eio.Fiber.fork ~sw (fun () -> run ~net);
+  Eio.Fiber.fork_daemon ~sw (fun () ->
+      run ~net;
+      `Stop_daemon);
   Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8080);
   Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8080);
   Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8080);
@@ -59,7 +61,9 @@ let () =
   Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8080);
 
   (* cli version is in bin/server.ml *)
-  Eio.Fiber.fork ~sw (fun () -> improved_run ~net ~uppercase:true ~port:8081);
+  Eio.Fiber.fork_daemon ~sw (fun () ->
+      improved_run ~net ~uppercase:true ~port:8081;
+      `Stop_daemon);
   Eio.Fiber.fork ~sw (fun () -> run_client ~net ~port:8081);
 
   let duckduckgo_result = get_definition ~net "ocaml" in
